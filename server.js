@@ -839,7 +839,7 @@ require("dotenv").config();
 const {
   sendRegistrationEmail,
   sendAdminNotification,
-} = require("./utils/emailService");
+} = require("./utils/emailServiceResend");
 
 const app = express();
 
