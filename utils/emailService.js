@@ -10,8 +10,8 @@ const transporter = nodemailer.createTransport({
   // ✅ Render.com optimization
   pool: true,
   maxConnections: 1,
-  socketTimeout: 30000,
-  connectionTimeout: 30000,
+  socketTimeout: 30000, // 30 seconds
+  connectionTimeout: 30000, // 30 seconds
   secure: true,
 });
 
@@ -80,23 +80,20 @@ const sendRegistrationEmail = async (studentData) => {
 
     const result = await transporter.sendMail(mailOptions);
     console.log("✅ Registration email sent to:", studentData.email);
-    return result;
+    return { success: true, result };
   } catch (error) {
     console.error("❌ Email sending failed:", error.message);
-    // Don't throw error for Render.com
-    return null;
+    return { success: false, error: error.message };
   }
 };
 
-// Admin notification email - DYNAMIC MULTIPLE ADMINS
+// Admin notification email
 const sendAdminNotification = async (studentData) => {
   try {
     console.log("📧 Attempting to send admin notification");
 
-    // Get admin emails from environment variable (comma separated)
+    // Get admin emails from environment variable
     const adminEmailsFromEnv = process.env.ADMIN_EMAILS || "admin@dental.com";
-
-    // Split by comma and remove any spaces
     const adminEmails = adminEmailsFromEnv
       .split(",")
       .map((email) => email.trim())
@@ -144,7 +141,7 @@ const sendAdminNotification = async (studentData) => {
                 </ul>
               </div>
               
-              <p>Please check the admin panel for more details and to assign batches.</p>
+              <p>Please check the admin panel for more details.</p>
               <p><a href="https://drrazib.netlify.app/admin/login" style="color: #3B82F6;">Go to Admin Panel</a></p>
             </div>
           </div>
@@ -155,8 +152,10 @@ const sendAdminNotification = async (studentData) => {
 
     await transporter.sendMail(mailOptions);
     console.log("✅ Admin notifications sent to:", adminEmails);
+    return { success: true };
   } catch (error) {
     console.error("❌ Admin email failed:", error.message);
+    return { success: false, error: error.message };
   }
 };
 
