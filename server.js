@@ -2183,9 +2183,6 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB Connected Successfully!");
-
-    const { initializeEmailService } = require("./utils/emailService");
-    initializeEmailService();
   })
 
   .catch((err) => {
