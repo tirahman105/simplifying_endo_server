@@ -1884,123 +1884,6 @@ app.put("/api/students/:id/total-payable", authMiddleware, async (req, res) => {
 
 // Student registration (Public)
 // Student registration (Public)
-// app.post("/api/students/register", async (req, res) => {
-//   try {
-//     console.log("📝 Registration attempt:", req.body);
-
-//     const {
-//       name,
-//       email,
-//       mobile,
-//       address,
-//       dentalCollege,
-//       session,
-//       passingYear,
-//       bmdc,
-//       practicePlace,
-//       batchId,
-//     } = req.body;
-
-//     // Basic validation
-//     if (
-//       !name ||
-//       !email ||
-//       !mobile ||
-//       !dentalCollege ||
-//       !session ||
-//       !passingYear ||
-//       !bmdc
-//     ) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "All required fields must be filled",
-//       });
-//     }
-
-//     // Check if student already exists
-//     const existingStudent = await Student.findOne({ email });
-//     if (existingStudent) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Student with this email already exists",
-//       });
-//     }
-
-//     const student = new Student({
-//       name,
-//       email,
-//       mobile,
-//       address: address || "",
-//       dentalCollege,
-//       session,
-//       passingYear,
-//       bmdc,
-//       practicePlace: practicePlace || "",
-//       totalPayable: 0,
-//       totalPaid: 0,
-//       due: 0,
-//       batches: batchId ? [batchId] : [],
-//       status: batchId ? "Assigned" : "Pending",
-//     });
-
-//     await student.save();
-//     console.log("✅ Student saved to database:", student.email);
-
-//     // ✅ Send confirmation email to student (ASYNC - don't wait for it)
-//     sendRegistrationEmail({
-//       name,
-//       email,
-//       mobile,
-//       dentalCollege,
-//       session,
-//       bmdc,
-//     })
-//       .then(() => console.log("✅ Confirmation email sent to student"))
-//       .catch((emailError) =>
-//         console.error(
-//           "❌ Email sending failed, but student saved:",
-//           emailError.message
-//         )
-//       );
-
-//     // ✅ Send notification to admin (ASYNC - don't wait for it)
-//     sendAdminNotification({
-//       name,
-//       email,
-//       mobile,
-//       dentalCollege,
-//       bmdc,
-//     })
-//       .then(() => console.log("✅ Admin notification sent"))
-//       .catch((adminEmailError) =>
-//         console.error("❌ Admin email failed:", adminEmailError.message)
-//       );
-
-//     // If batchId provided, add student to batch
-//     if (batchId) {
-//       await Batch.findByIdAndUpdate(batchId, {
-//         $push: { students: student._id },
-//       });
-//       console.log(`✅ Student added to batch: ${batchId}`);
-//     }
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Registration successful! Confirmation email sent.",
-//       data: student,
-//     });
-//   } catch (error) {
-//     console.error("❌ Registration error:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Server error during registration",
-//       error: error.message,
-//     });
-//   }
-// });
-
-// Student registration (Public)
-// Student registration (Public)
 app.post("/api/students/register", async (req, res) => {
   try {
     console.log("📝 Registration attempt:", req.body);
@@ -2018,42 +1901,80 @@ app.post("/api/students/register", async (req, res) => {
       batchId,
     } = req.body;
 
-    // ... validation and student creation ...
+    // Basic validation
+    if (
+      !name ||
+      !email ||
+      !mobile ||
+      !dentalCollege ||
+      !session ||
+      !passingYear ||
+      !bmdc
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All required fields must be filled",
+      });
+    }
+
+    // Check if student already exists
+    const existingStudent = await Student.findOne({ email });
+    if (existingStudent) {
+      return res.status(400).json({
+        success: false,
+        message: "Student with this email already exists",
+      });
+    }
+
+    const student = new Student({
+      name,
+      email,
+      mobile,
+      address: address || "",
+      dentalCollege,
+      session,
+      passingYear,
+      bmdc,
+      practicePlace: practicePlace || "",
+      totalPayable: 0,
+      totalPaid: 0,
+      due: 0,
+      batches: batchId ? [batchId] : [],
+      status: batchId ? "Assigned" : "Pending",
+    });
 
     await student.save();
     console.log("✅ Student saved to database:", student.email);
 
-    // ✅ NON-BLOCKING email (Render free tier optimization)
-    setTimeout(() => {
-      sendRegistrationEmail({
-        name,
-        email,
-        mobile,
-        dentalCollege,
-        session,
-        bmdc,
-      }).then((result) => {
-        if (result.success) {
-          console.log("✅ Confirmation email sent to student");
-        } else {
-          console.log("❌ Student email failed (but registration successful)");
-        }
-      });
+    // ✅ Send confirmation email to student (ASYNC - don't wait for it)
+    sendRegistrationEmail({
+      name,
+      email,
+      mobile,
+      dentalCollege,
+      session,
+      bmdc,
+    })
+      .then(() => console.log("✅ Confirmation email sent to student"))
+      .catch((emailError) =>
+        console.error(
+          "❌ Email sending failed, but student saved:",
+          emailError.message
+        )
+      );
 
-      sendAdminNotification({
-        name,
-        email,
-        mobile,
-        dentalCollege,
-        bmdc,
-      }).then((result) => {
-        if (result.success) {
-          console.log("✅ Admin notification sent");
-        } else {
-          console.log("❌ Admin email failed (but registration successful)");
-        }
-      });
-    }, 2000); // 2 second delay
+    // ✅ Send notification to admin (ASYNC - don't wait for it)
+    sendAdminNotification({
+      name,
+      email,
+      mobile,
+      dentalCollege,
+      bmdc,
+    })
+      .then(() => console.log("✅ Admin notification sent"))
+      .catch((adminEmailError) =>
+        console.error("❌ Admin email failed:", adminEmailError.message)
+      );
 
     // If batchId provided, add student to batch
     if (batchId) {
@@ -2065,7 +1986,7 @@ app.post("/api/students/register", async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Registration successful! We will contact you soon.",
+      message: "Registration successful! Confirmation email sent.",
       data: student,
     });
   } catch (error) {
@@ -2077,6 +1998,9 @@ app.post("/api/students/register", async (req, res) => {
     });
   }
 });
+
+// Student registration (Public)
+// Student registration (Public)
 
 // Update student information - COMPLETE UPDATE (NEW ROUTE)
 app.put("/api/students/:id", authMiddleware, async (req, res) => {
