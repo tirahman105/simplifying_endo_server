@@ -107,7 +107,7 @@ const sendAdminNotification = async (studentData) => {
     await Promise.race([
       transporter.sendMail(mailOptions),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Gmail timeout")), 10000)
+        setTimeout(() => reject(new Error("Gmail timeout")), 20000)
       ),
     ]);
 
