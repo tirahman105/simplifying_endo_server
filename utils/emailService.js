@@ -124,7 +124,7 @@ const sendAdminNotification = async (studentData) => {
               </div>
               
               <p>Please check the admin panel for more details and to assign batches.</p>
-              <p><a href="http://localhost:3000/admin/login" style="color: #3B82F6;">Go to Admin Panel</a></p>
+              <p><a href="https://drrazib.netlify.app/admin/login" style="color: #3B82F6;">Go to Admin Panel</a></p>
             </div>
           </div>
         </body>
