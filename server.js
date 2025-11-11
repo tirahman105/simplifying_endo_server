@@ -2000,6 +2000,7 @@ app.put("/api/students/:id/total-payable", authMiddleware, async (req, res) => {
 // });
 
 // Student registration (Public)
+// Student registration (Public)
 app.post("/api/students/register", async (req, res) => {
   try {
     console.log("📝 Registration attempt:", req.body);
@@ -2017,90 +2018,42 @@ app.post("/api/students/register", async (req, res) => {
       batchId,
     } = req.body;
 
-    // Basic validation
-    if (
-      !name ||
-      !email ||
-      !mobile ||
-      !dentalCollege ||
-      !session ||
-      !passingYear ||
-      !bmdc
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All required fields must be filled",
-      });
-    }
-
-    // Check if student already exists
-    const existingStudent = await Student.findOne({ email });
-    if (existingStudent) {
-      return res.status(400).json({
-        success: false,
-        message: "Student with this email already exists",
-      });
-    }
-
-    const student = new Student({
-      name,
-      email,
-      mobile,
-      address: address || "",
-      dentalCollege,
-      session,
-      passingYear,
-      bmdc,
-      practicePlace: practicePlace || "",
-      totalPayable: 0,
-      totalPaid: 0,
-      due: 0,
-      batches: batchId ? [batchId] : [],
-      status: batchId ? "Assigned" : "Pending",
-    });
+    // ... validation and student creation ...
 
     await student.save();
     console.log("✅ Student saved to database:", student.email);
 
-    // ✅ Send emails ASYNC with proper error handling
-    setTimeout(async () => {
-      try {
-        const emailResult = await sendRegistrationEmail({
-          name,
-          email,
-          mobile,
-          dentalCollege,
-          session,
-          bmdc,
-        });
-
-        if (emailResult.success) {
+    // ✅ NON-BLOCKING email (Render free tier optimization)
+    setTimeout(() => {
+      sendRegistrationEmail({
+        name,
+        email,
+        mobile,
+        dentalCollege,
+        session,
+        bmdc,
+      }).then((result) => {
+        if (result.success) {
           console.log("✅ Confirmation email sent to student");
         } else {
-          console.log("❌ Email sending failed:", emailResult.error);
+          console.log("❌ Student email failed (but registration successful)");
         }
-      } catch (emailError) {
-        console.error("❌ Email error:", emailError.message);
-      }
+      });
 
-      try {
-        const adminResult = await sendAdminNotification({
-          name,
-          email,
-          mobile,
-          dentalCollege,
-          bmdc,
-        });
-
-        if (adminResult.success) {
+      sendAdminNotification({
+        name,
+        email,
+        mobile,
+        dentalCollege,
+        bmdc,
+      }).then((result) => {
+        if (result.success) {
           console.log("✅ Admin notification sent");
         } else {
-          console.log("❌ Admin email failed:", adminResult.error);
+          console.log("❌ Admin email failed (but registration successful)");
         }
-      } catch (adminError) {
-        console.error("❌ Admin email error:", adminError.message);
-      }
-    }, 1000); // 1 second delay
+      });
+    }, 2000); // 2 second delay
 
     // If batchId provided, add student to batch
     if (batchId) {

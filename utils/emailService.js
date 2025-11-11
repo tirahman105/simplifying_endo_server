@@ -1,24 +1,28 @@
 const nodemailer = require("nodemailer");
 
-// Create transporter with Render-optimized settings
+// Render-optimized Gmail transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587, // Use port 587 (not 465)
+  secure: false, // false for port 587
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  // ✅ Render.com optimization
-  pool: true,
+  // ✅ Render.com-specific optimizations
+  connectionTimeout: 15000, // 15 seconds
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
+  pool: false, // Single connection (Render free tier limitation)
   maxConnections: 1,
-  socketTimeout: 30000, // 30 seconds
-  connectionTimeout: 30000, // 30 seconds
-  secure: true,
+  maxMessages: 1,
+  debug: true, // See what's happening
+  logger: true,
 });
 
-// Registration confirmation email
 const sendRegistrationEmail = async (studentData) => {
   try {
-    console.log("📧 Attempting to send email to:", studentData.email);
+    console.log("📧 Attempting to send Gmail to:", studentData.email);
 
     const mailOptions = {
       from: {
@@ -36,8 +40,6 @@ const sendRegistrationEmail = async (studentData) => {
             .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
             .header { background: #3B82F6; color: white; padding: 25px; text-align: center; }
             .content { padding: 30px; background: #f9f9f9; }
-            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; padding: 20px; }
-            .details { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; }
           </style>
         </head>
         <body>
@@ -47,30 +49,9 @@ const sendRegistrationEmail = async (studentData) => {
             </div>
             <div class="content">
               <h2>Dear ${studentData.name},</h2>
-              <p>Thank you for registering for our Simplifying Endo 2 days Comprehensive hands on program!</p>
-              
-              <div class="details">
-                <h3>📋 Registration Details:</h3>
-                <ul>
-                  <li><strong>Name:</strong> ${studentData.name}</li>
-                  <li><strong>Email:</strong> ${studentData.email}</li>
-                  <li><strong>Mobile:</strong> ${studentData.mobile}</li>
-                  <li><strong>Dental College:</strong> ${studentData.dentalCollege}</li>
-                  <li><strong>Session:</strong> ${studentData.session}</li>
-                  <li><strong>BMDC:</strong> ${studentData.bmdc}</li>
-                </ul>
-              </div>
-              
-              <p>✅ Your registration has been received successfully.</p>
-              <p>We will review your application and contact you within 24-48 hours.</p>
-              
-              <p><strong>📞 Contact Information:</strong></p>
+              <p>Thank you for registering!</p>
+              <p>We will contact you within 24-48 hours.</p>
               <p>Phone: +8801716282031</p>
-                 
-              <p>Best regards,<br>Simplifying Endo Team</p>
-            </div>
-            <div class="footer">
-              <p>&copy; 2025 Simplifying Endo by Dr. Razib Hossen. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -78,21 +59,26 @@ const sendRegistrationEmail = async (studentData) => {
       `,
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log("✅ Registration email sent to:", studentData.email);
+    // ✅ Quick send with timeout
+    const result = await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Gmail timeout")), 10000)
+      ),
+    ]);
+
+    console.log("✅ Gmail sent successfully to:", studentData.email);
     return { success: true, result };
   } catch (error) {
-    console.error("❌ Email sending failed:", error.message);
+    console.error("❌ Gmail failed:", error.message);
     return { success: false, error: error.message };
   }
 };
 
-// Admin notification email
 const sendAdminNotification = async (studentData) => {
   try {
-    console.log("📧 Attempting to send admin notification");
+    console.log("📧 Attempting to send admin Gmail");
 
-    // Get admin emails from environment variable
     const adminEmailsFromEnv = process.env.ADMIN_EMAILS || "admin@dental.com";
     const adminEmails = adminEmailsFromEnv
       .split(",")
@@ -106,73 +92,34 @@ const sendAdminNotification = async (studentData) => {
         address: process.env.GMAIL_USER,
       },
       to: adminEmails,
-      subject: "🆕 New Student Registration - Simplifying Endo",
+      subject: "🆕 New Student Registration",
       html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
-            .header { background: #10B981; color: white; padding: 20px; text-align: center; }
-            .content { padding: 25px; background: #f9f9f9; }
-            .student-info { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3B82F6; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h2>📋 New Student Registration</h2>
-            </div>
-            <div class="content">
-              <p><strong>A new student has registered for the training program:</strong></p>
-              
-              <div class="student-info">
-                <h3>Student Details:</h3>
-                <ul>
-                  <li><strong>Name:</strong> ${studentData.name}</li>
-                  <li><strong>Email:</strong> ${studentData.email}</li>
-                  <li><strong>Mobile:</strong> ${studentData.mobile}</li>
-                  <li><strong>College:</strong> ${
-                    studentData.dentalCollege
-                  }</li>
-                  <li><strong>BMDC:</strong> ${studentData.bmdc}</li>
-                  <li><strong>Registration Time:</strong> ${new Date().toLocaleString()}</li>
-                </ul>
-              </div>
-              
-              <p>Please check the admin panel for more details.</p>
-              <p><a href="https://drrazib.netlify.app/admin/login" style="color: #3B82F6;">Go to Admin Panel</a></p>
-            </div>
-          </div>
-        </body>
-        </html>
+        <div>
+          <h2>New Student Registration</h2>
+          <p><strong>Name:</strong> ${studentData.name}</p>
+          <p><strong>Email:</strong> ${studentData.email}</p>
+          <p><strong>Mobile:</strong> ${studentData.mobile}</p>
+        </div>
       `,
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log("✅ Admin notifications sent to:", adminEmails);
+    // ✅ Quick send with timeout
+    await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Gmail timeout")), 10000)
+      ),
+    ]);
+
+    console.log("✅ Admin Gmail sent to:", adminEmails);
     return { success: true };
   } catch (error) {
-    console.error("❌ Admin email failed:", error.message);
+    console.error("❌ Admin Gmail failed:", error.message);
     return { success: false, error: error.message };
-  }
-};
-
-// Test email connection
-const testEmailConnection = async () => {
-  try {
-    await transporter.verify();
-    console.log("✅ Email server is ready to send messages");
-    return true;
-  } catch (error) {
-    console.error("❌ Email server connection failed:", error.message);
-    return false;
   }
 };
 
 module.exports = {
   sendRegistrationEmail,
   sendAdminNotification,
-  testEmailConnection,
 };
